@@ -89,20 +89,7 @@ async function main() {
     // getDominantLabels().forEach(l => {
     //     console.log(`${l.label} ${l.categories.length > 0 ? `(${l.categories})` : ''}: ${l.fullLabelDuration} (${l.labelRatio * 100}%)`);
     // });
-    console.log(JSON.stringify(searchTimestampsForLabel('crossing'), null, 2));
+    console.log(JSON.stringify(searchTimestampsForLabel('river'), null, 2));
 }
 
 main().catch(e => process.exit(1));
-
-//
-// "shot_label_annotations": [ {
-//     "entity": {
-//         "entity_id": "/m/03c31",
-//         "description": "graphic design",
-//         "language_code": "en-US"
-//     },
-//     "category_entities": [ {
-//         "entity_id": "/m/0dgsmq8",
-//         "description": "artwork",
-//         "language_code": "en-US"
-//     } ],
