@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 'use strict';
+const fs = require('fs');
 
 async function analyzeLabelsGCS(gcsUri) {
   // [START video_analyze_labels_gcs]
@@ -274,7 +274,7 @@ async function analyzeVideoTranscription(gcsUri) {
       speechTranscriptionConfig: {
         languageCode: 'en-US',
         enableAutomaticPunctuation: true,
-        
+
       },
     };
 
@@ -290,6 +290,17 @@ async function analyzeVideoTranscription(gcsUri) {
     // There is only one annotation_result since only
     // one video is processed.
     const annotationResults = operationResult.annotationResults[0];
+
+    const jsonResponse = JSON.stringify(annotationResults, null, 2);
+    const generateNewFileName = gcsUri.split('/').pop().split('.').shift();
+    
+    
+    fs.writeFile(`${generateNewFileName}-transcript.json`, jsonResponse, 'utf8', function(err) {
+      if (err) {
+        return console.log(err);
+      }
+      console.log('API response written to file successfully!');
+    });
 
     for (const speechTranscription of annotationResults.speechTranscriptions) {
       // The number of alternatives for each transcription is limited by
