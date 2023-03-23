@@ -14,6 +14,83 @@
 'use strict';
 const fs = require('fs');
 
+async function detectRedBullLogoGCS(gcsUri) {
+  // [START video_analyze_labels_gcs]
+  // Imports the Google Cloud Video Intelligence library
+  const video = require('@google-cloud/video-intelligence').v1;
+
+  // Creates a client
+  const client = new video.VideoIntelligenceServiceClient();
+
+  const request = {
+    inputUri: gcsUri,
+    features: ['LOGO_RECOGNITION'],
+  };
+
+  // Detects logos in a video
+  const [operation] = await client.annotateVideo(request);
+  console.log('Waiting for operation to complete...');
+  const [operationResult] = await operation.promise();
+
+  // Gets annotations for video
+  const annotations = operationResult.annotationResults[0];
+  const redbullLogoRecognitions = Array.from(annotations.logoRecognitionAnnotations).filter(logo => logo.entity.description.includes('Red Bull'));
+  for (const logoRecognitionAnnotation of redbullLogoRecognitions) {
+    const entity = logoRecognitionAnnotation.entity;
+    // Opaque entity ID. Some IDs may be available in
+    // [Google Knowledge Graph Search API](https://developers.google.com/knowledge-graph/).
+    console.log(`Entity Id: ${entity.entityId}`);
+    console.log(`Description: ${entity.description}`);
+
+    // All logo tracks where the recognized logo appears.
+    // Each track corresponds to one logo instance appearing in consecutive frames.
+    for (const track of logoRecognitionAnnotation.tracks) {
+      console.log(
+          `\n\tStart Time Offset: ${track.segment.startTimeOffset.seconds}.${track.segment.startTimeOffset.nanos}`
+      );
+      console.log(
+          `\tEnd Time Offset: ${track.segment.endTimeOffset.seconds}.${track.segment.endTimeOffset.nanos}`
+      );
+      console.log(`\tConfidence: ${track.confidence}`);
+
+      // // The object with timestamp and attributes per frame in the track.
+      // for (const timestampedObject of track.timestampedObjects) {
+      //   // Normalized Bounding box in a frame, where the object is located.
+      //   const normalizedBoundingBox = timestampedObject.normalizedBoundingBox;
+      //   console.log(`\n\t\tLeft: ${normalizedBoundingBox.left}`);
+      //   console.log(`\t\tTop: ${normalizedBoundingBox.top}`);
+      //   console.log(`\t\tRight: ${normalizedBoundingBox.right}`);
+      //   console.log(`\t\tBottom: ${normalizedBoundingBox.bottom}`);
+      //   // Optional. The attributes of the object in the bounding box.
+      //   for (const attribute of timestampedObject.attributes) {
+      //     console.log(`\n\t\t\tName: ${attribute.name}`);
+      //     console.log(`\t\t\tConfidence: ${attribute.confidence}`);
+      //     console.log(`\t\t\tValue: ${attribute.value}`);
+      //   }
+      // }
+      //
+      // // Optional. Attributes in the track level.
+      // for (const trackAttribute of track.attributes) {
+      //   console.log(`\n\t\tName: ${trackAttribute.name}`);
+      //   console.log(`\t\tConfidence: ${trackAttribute.confidence}`);
+      //   console.log(`\t\tValue: ${trackAttribute.value}`);
+      // }
+    }
+
+    // All video segments where the recognized logo appears.
+    // There might be multiple instances of the same logo class appearing in one VideoSegment.
+    // for (const segment of logoRecognitionAnnotation.segments) {
+    //   console.log(
+    //       `\n\tStart Time Offset: ${segment.startTimeOffset.seconds}.${segment.startTimeOffset.nanos}`
+    //   );
+    //   console.log(
+    //       `\tEnd Time Offset: ${segment.endTimeOffset.seconds}.${segment.endTimeOffset.nanos}`
+    //   );
+    // }
+  }
+
+}
+
 async function analyzeLabelsGCS(gcsUri) {
   // [START video_analyze_labels_gcs]
   // Imports the Google Cloud Video Intelligence library
@@ -30,6 +107,11 @@ async function analyzeLabelsGCS(gcsUri) {
   const request = {
     inputUri: gcsUri,
     features: ['LABEL_DETECTION'],
+      videoContext: {
+        labelDetectionConfig: {
+          labelDetectionMode: 'FRAME_MODE'
+        }
+      }
   };
 
   // Detects labels in a video
@@ -95,6 +177,11 @@ async function analyzeLabelsLocal(path) {
   const request = {
     inputContent: inputContent,
     features: ['LABEL_DETECTION'],
+    videoContext: {
+      labelDetectionConfig: {
+        labelDetectionMode: 'SHOT_AND_FRAME_MODE'
+      }
+    }
   };
 
   // Detects labels in a video
@@ -588,6 +675,12 @@ async function main() {
       opts => analyzeLabelsLocal(opts.filePath)
     )
     .command(
+        'logos <gcsUri>',
+        'Detects occurrences of the Red Bull logo in a video stored in Google Cloud Storage using the Cloud Video Intelligence API.',
+        {},
+        opts => detectRedBullLogoGCS(opts.gcsUri)
+    )
+    .command(
       'safe-search <gcsUri>',
       'Detects explicit content in a video stored in Google Cloud Storage.',
       {},
@@ -626,6 +719,7 @@ async function main() {
     .example('node $0 shots gs://cloud-samples-data/video/googlework_short.mp4')
     .example('node $0 labels-gcs gs://cloud-samples-data/video/cat.mp4')
     .example('node $0 labels-file googlework_short.mp4')
+    .example('node $0 logos gs://cloud-samples-data/video/cat.mp4')
     .example(
       'node $0 safe-search gs://cloud-samples-data/video/googlework_short.mp4'
     )
