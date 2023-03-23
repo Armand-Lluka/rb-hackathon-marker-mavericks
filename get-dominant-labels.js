@@ -1,5 +1,5 @@
 
-const videoAnnotations = require('./FO-2A9RJC59T1114_proxy_normal - 1679579326.476749.json');
+const videoAnnotations = require('./data/FO-2A9RJC59T1114_proxy_normal - 1679579326.476749.json');
 
 
 function convertTimestampToNumber(timestamp) {
@@ -43,10 +43,38 @@ function getDominantLabels() {
     return dominantLabels;
 }
 
-function main() {
-    getDominantLabels().forEach(l => {
-        console.log(`${l.label} ${l.categories.length > 0 ? `(${l.categories})` : ''}: ${l.fullLabelDuration} (${l.labelRatio * 100}%)`);
+const labelIndex = {};
+
+function indexLabels() {
+    videoAnnotations.annotation_results.forEach(r => {
+        if (r.shot_label_annotations) {
+            for (const shotLabel of r.shot_label_annotations) {
+                const longEnoughSegments = shotLabel.segments.filter(s => calculateSegmentDuration(s.segment) >= 1);
+                longEnoughSegments.forEach(s => {
+                    if (!labelIndex[shotLabel.entity.description]) {
+                        labelIndex[shotLabel.entity.description] = [];
+                    }
+                    labelIndex[shotLabel.entity.description].push({
+                        label: shotLabel.entity.description,
+                        timeStamp: convertTimestampToNumber(s.segment.start_time_offset),
+                        duration: calculateSegmentDuration(s.segment)
+                    })
+                });
+            }
+        }
     });
+}
+
+function searchTimestampsForLabel(searchText) {
+    return Object.entries(labelIndex).filter(([key]) => key.includes(searchText)).flatMap(([key, info]) => info);
+}
+
+function main() {
+    // getDominantLabels().forEach(l => {
+    //     console.log(`${l.label} ${l.categories.length > 0 ? `(${l.categories})` : ''}: ${l.fullLabelDuration} (${l.labelRatio * 100}%)`);
+    // });
+    indexLabels();
+    console.log(JSON.stringify(searchTimestampsForLabel('crossing'), null, 2));
 }
 
 main();
