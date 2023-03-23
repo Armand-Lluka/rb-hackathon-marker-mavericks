@@ -1,5 +1,13 @@
+const fs = require('fs/promises');
 
-const videoAnnotations = require('./data/FO-2A9RJC59T1114_proxy_normal - 1679579326.476749.json');
+const videoAnnotations = [];
+async function readData() {
+    const files = await fs.readdir('./data');
+    await Promise.all(files.map(async (file) => {
+        const fileContent = await fs.readFile(`./data/${file}`, null, 'utf-8');
+        videoAnnotations.push(JSON.parse(fileContent));
+    }));
+}
 
 
 function convertTimestampToNumber(timestamp) {
@@ -21,24 +29,26 @@ function getFullDuration(shotLabel) {
 
 function getDominantLabels() {
     const dominantLabels = [];
-    videoAnnotations.annotation_results.forEach(r => {
-        if (r.shot_label_annotations) {
-            let fullVideoLength = calculateSegmentDuration(r.segment);
-            console.log(`full video length: ${fullVideoLength}`);
-            for (const shotLabel of r.shot_label_annotations) {
-                const categories = (shotLabel.category_entities ?? []).map(e => e.description).join(', ');
-                let fullLabelDuration = getFullDuration(shotLabel);
-                let labelRatio = fullLabelDuration / fullVideoLength;
-                if (labelRatio > 0.1) {
-                    dominantLabels.push({
-                        label: shotLabel.entity.description,
-                        categories,
-                        fullLabelDuration,
-                        labelRatio
-                    })
+    videoAnnotations.forEach(va => {
+        va.annotation_results.forEach(r => {
+            if (r.shot_label_annotations) {
+                let fullVideoLength = calculateSegmentDuration(r.segment);
+                console.log(`full video length: ${fullVideoLength}`);
+                for (const shotLabel of r.shot_label_annotations) {
+                    const categories = (shotLabel.category_entities ?? []).map(e => e.description).join(', ');
+                    let fullLabelDuration = getFullDuration(shotLabel);
+                    let labelRatio = fullLabelDuration / fullVideoLength;
+                    if (labelRatio > 0.1) {
+                        dominantLabels.push({
+                            label: shotLabel.entity.description,
+                            categories,
+                            fullLabelDuration,
+                            labelRatio
+                        })
+                    }
                 }
             }
-        }
+        });
     });
     return dominantLabels;
 }
@@ -46,22 +56,26 @@ function getDominantLabels() {
 const labelIndex = {};
 
 function indexLabels() {
-    videoAnnotations.annotation_results.forEach(r => {
-        if (r.shot_label_annotations) {
-            for (const shotLabel of r.shot_label_annotations) {
-                const longEnoughSegments = shotLabel.segments.filter(s => calculateSegmentDuration(s.segment) >= 1);
-                longEnoughSegments.forEach(s => {
-                    if (!labelIndex[shotLabel.entity.description]) {
-                        labelIndex[shotLabel.entity.description] = [];
-                    }
-                    labelIndex[shotLabel.entity.description].push({
-                        label: shotLabel.entity.description,
-                        timeStamp: convertTimestampToNumber(s.segment.start_time_offset),
-                        duration: calculateSegmentDuration(s.segment)
-                    })
-                });
+    videoAnnotations.forEach(va => {
+        va.annotation_results.forEach(r => {
+            if (r.shot_label_annotations) {
+                const fileName = r.input_uri;
+                for (const shotLabel of r.shot_label_annotations) {
+                    const longEnoughSegments = shotLabel.segments.filter(s => calculateSegmentDuration(s.segment) >= 1);
+                    longEnoughSegments.forEach(s => {
+                        if (!labelIndex[shotLabel.entity.description]) {
+                            labelIndex[shotLabel.entity.description] = [];
+                        }
+                        labelIndex[shotLabel.entity.description].push({
+                            file: fileName,
+                            label: shotLabel.entity.description,
+                            timeStamp: convertTimestampToNumber(s.segment.start_time_offset),
+                            duration: calculateSegmentDuration(s.segment)
+                        })
+                    });
+                }
             }
-        }
+        });
     });
 }
 
@@ -69,15 +83,16 @@ function searchTimestampsForLabel(searchText) {
     return Object.entries(labelIndex).filter(([key]) => key.includes(searchText)).flatMap(([key, info]) => info);
 }
 
-function main() {
+async function main() {
+    await readData();
+    indexLabels();
     // getDominantLabels().forEach(l => {
     //     console.log(`${l.label} ${l.categories.length > 0 ? `(${l.categories})` : ''}: ${l.fullLabelDuration} (${l.labelRatio * 100}%)`);
     // });
-    indexLabels();
     console.log(JSON.stringify(searchTimestampsForLabel('crossing'), null, 2));
 }
 
-main();
+main().catch(e => process.exit(1));
 
 //
 // "shot_label_annotations": [ {
