@@ -99,6 +99,7 @@ const paragraphStartTimes = computed(() => {
 function jumpToTimestamp(time: number) {
   if (videoElement.value) {
     videoElement.value.currentTime = time;
+    videoElement.value?.play();
   }
 }
 
@@ -106,6 +107,7 @@ function jumpToWord(word: Word) {
   if (videoElement.value) {
     videoElement.value.currentTime =
       (word.start_time.seconds ?? 0) + (word.start_time.nanos ?? 0) / 1e9;
+    videoElement.value?.play();
   }
 }
 
