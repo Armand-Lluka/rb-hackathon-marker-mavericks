@@ -333,9 +333,14 @@ function calculateSegmentDuration(segment: Segment): number {
   position: absolute;
   z-index: 10;
   top: 100%;
-  left: 10%;
+  left: 50%;
   border: 2px solid black;
   background: white;
+  transform: translateX(-250px);
+  max-width: calc(500px - 2rem);
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 1rem;
 }
 
 .search-result {
