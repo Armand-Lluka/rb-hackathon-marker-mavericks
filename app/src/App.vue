@@ -113,6 +113,7 @@ function onSearchResultClick(result: LabelTimestamp) {
   jumpToTimestamp(result.timeStamp);
   currentSearchResult.value = [];
   currentSearchInput.value = "";
+  videoElement.value?.play();
 }
 
 function handleTimeUpdate(event: Event) {
@@ -223,7 +224,7 @@ function calculateSegmentDuration(segment: Segment): number {
 <template>
   <header class="header">
     <CosmosTitle><CosmosIconPlay/>VideoGenius</CosmosTitle>
-    <CosmosInput class="search" label="Search" placeholder="Search for videos containing keywords or objects" @inputinput="onSearchChanged"></CosmosInput>
+    <CosmosInput class="search" label="Search" placeholder="Search for keywords or objects in the video" @inputinput="onSearchChanged" clearable></CosmosInput>
     <div class="search-results" v-if="currentSearchResult.length > 0">
       <CosmosText v-for="(result, index) in currentSearchResult" :key="index"
                   size="small@medium medium@small"
@@ -330,21 +331,27 @@ function calculateSegmentDuration(segment: Segment): number {
 }
 
 .search-results {
-  position: absolute;
-  z-index: 10;
-  top: 100%;
-  left: 50%;
-  border: 2px solid black;
   background: white;
-  transform: translateX(-250px);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 15, 30, 0.4);
+  left: 50%;
+  margin-top: 0.5rem;
   max-width: calc(500px - 2rem);
-  width: 100%;
-  margin-top: 0.6rem;
   padding: 1rem;
+  position: absolute;
+  top: 100%;
+  transform: translateX(-250px);
+  width: 100%;
+  z-index: 10;
 }
 
 .search-result {
   cursor: pointer;
+  padding: 0.5rem 1rem;
+}
+
+.search-result:hover {
+  --cosmos-text-color: rgba(0, 15, 30, 0.6);
 }
 
 </style>
