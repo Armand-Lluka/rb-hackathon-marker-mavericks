@@ -16,14 +16,14 @@ body {
   margin-inline-start: auto;
 }
 
-.video-transcript {
+/* .video-transcript {
   display: grid;
   grid-template-columns: 3fr 2fr;
   max-width: 1400px;
   margin: 0 auto;
   gap: 1rem;
   padding: 1rem;
-}
+} */
 
 video {
   max-width: 100%;
@@ -37,7 +37,7 @@ video {
 }
 
 .paragraph {
-  padding: 0.8rem 2rem;
+  padding: 0.8rem;
 }
 
 .paragraph:empty {
