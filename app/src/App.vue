@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import { CosmosText, CosmosTitle, CosmosInput, CosmosIconPlay } from "@cosmos/web/vue";
-import videoJson1 from "../public/MI201208130045_h264_720p - 1679578569.021352.json";
+import videoJson1 from "../public/FO-27AWNM25HBH13_proxy_normal - 1679579337.0189621.json";
 
 import VideoPlayer from "./components/VideoPlayer.vue";
 import Transcript from "./components/Transcript.vue";
@@ -9,10 +9,10 @@ import Transcript from "./components/Transcript.vue";
 import type { Ref } from "vue";
 import type {AnnotationResult, ParagraphTime, Segment, TimeOffset, Word} from "@/types/types";
 
-import speechTranscription from "./assets/json-output/SPEECH_TRANSCRIPTION/MI201208130045_h264_720p.json";
+import speechTranscription from "../public/FO-27AWNM25HBH13_proxy_normal - 1679579337.0189621.json";
 
 const VIDEO_URL =
-  "https://storage.googleapis.com/redbull_video_storage/MI201208130045_h264_720p.mp4";
+  "https://storage.googleapis.com/redbull_video_storage/FO-27AWNM25HBH13_proxy_normal.mp4";
 
 const ANNOTATIONS: any = {
   'MI201208130045_h264': videoJson1,
@@ -24,7 +24,7 @@ const VIDEO_IDS = [
 ];
 
 const VIDEO_URLS = [
-  "https://storage.googleapis.com/redbull_video_storage/MI201208130045_h264_720p.mp4",
+  "https://storage.googleapis.com/redbull_video_storage/FO-27AWNM25HBH13_proxy_normal.mp4",
 ];
 
 function getVideoStorageUrl(videoId: string) {
@@ -38,8 +38,10 @@ interface LabelTimestamp {
   duration: number;
 }
 
+console.log(speechTranscription);
+
 const transcription: AnnotationResult =
-    filterTranscript(speechTranscription.annotation_results[0]);
+    filterTranscript(speechTranscription.annotation_results[1] as any);
 const currentParagraph = ref(-1);
 const currentWordIndex = ref(-1);
 const videoElement: Ref<HTMLVideoElement | null> = ref(null);
