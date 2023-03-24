@@ -1,7 +1,7 @@
 const fs = require('fs/promises');
 
 const videoAnnotations = [];
-async function readData() {
+export async function readData() {
     const files = await fs.readdir('./data');
     await Promise.all(files.map(async (file) => {
         const fileContent = await fs.readFile(`./data/${file}`, null, 'utf-8');
@@ -55,7 +55,7 @@ function getDominantLabels() {
 
 const labelIndex = {};
 
-function indexLabels() {
+export function indexLabels() {
     videoAnnotations.forEach(va => {
         va.annotation_results.forEach(r => {
             if (r.shot_label_annotations) {

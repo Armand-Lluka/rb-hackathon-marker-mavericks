@@ -1,23 +1,54 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import { CosmosText, CosmosTitle, CosmosInput } from "@cosmos/web/vue";
+import videoJson1 from "../public/FO-2BDUE7Y9A1113_proxy_normal - 1679579329.9757383.json";
+import videoJson2 from "../public/FO-2CDBKSCY61114_proxy_normal - 1679579329.0579545.json";
+
 
 import VideoPlayer from "./components/VideoPlayer.vue";
 import Transcript from "./components/Transcript.vue";
 
 import type { Ref } from "vue";
-import type { AnnotationResult, ParagraphTime, Word } from "@/types/types";
+import type {AnnotationResult, ParagraphTime, Segment, TimeOffset, Word} from "@/types/types";
 
 import speechTranscription from "./assets/json-output/SPEECH_TRANSCRIPTION/MI201208130045_h264_720p.json";
 
 const VIDEO_URL =
   "https://storage.googleapis.com/redbull_video_storage/MI201208130045_h264_720p.mp4";
 
+function getVideoStorageUrl(videoId: string) {
+  return `https://storage.googleapis.com/redbull_video_storage/${videoId}.mp4`;
+}
+
+const videoIDs = [
+  "MI201305080084_h264_720p",
+  "FO-2BDUE7Y9A1113_proxy_normal",
+  "MI201208130045_h264_720p",
+  "MI201205150126_h264_1080p",
+  "FO-2CDBKSCY61114_proxy_normal"
+];
+
+const videoURLS = [
+  "https://storage.googleapis.com/redbull_video_storage/MI201305080084_h264_720p.mp4",
+  "https://storage.googleapis.com/redbull_video_storage/FO-2BDUE7Y9A1113_proxy_normal.mp4",
+  "https://storage.googleapis.com/redbull_video_storage/MI201208130045_h264_720p.mp4",
+  "https://storage.googleapis.com/redbull_video_storage/MI201205150126_h264_1080p.mp4",
+  "https://storage.googleapis.com/redbull_video_storage/FO-2CDBKSCY61114_proxy_normal.mp4"
+];
+
+interface LabelTimestamp {
+  file: string;
+  label: string;
+  timeStamp: number;
+  duration: number;
+}
+
 const transcription: AnnotationResult =
     filterTranscript(speechTranscription.annotation_results[0]);
 const currentParagraph = ref(-1);
 const currentWordIndex = ref(-1);
 const videoElement: Ref<HTMLVideoElement | null> = ref(null);
+const labelIndex: Record<string, LabelTimestamp[]> = {};
 
 onMounted(() => {
   videoElement.value = document.querySelector("video");
@@ -127,12 +158,51 @@ watch(currentParagraph, (newValue) => {
     }
   }
 });
+
+function indexLabels() {
+  const videoAnnotations = [videoJson1];
+  videoAnnotations.forEach(va => {
+    va.annotation_results.forEach(r => {
+      if (r.shot_label_annotations) {
+        const fileName = r.input_uri;
+        for (const shotLabel of r.shot_label_annotations) {
+          const segments: {segment: Segment}[] = shotLabel.segments;
+          const longEnoughSegments = segments.filter(s => calculateSegmentDuration(s.segment) >= 1);
+          longEnoughSegments.forEach(s => {
+            if (!labelIndex[shotLabel.entity.description]) {
+              labelIndex[shotLabel.entity.description] = [];
+            }
+            labelIndex[shotLabel.entity.description].push({
+              file: fileName,
+              label: shotLabel.entity.description,
+              timeStamp: convertTimestampToNumber(s.segment.start_time_offset),
+              duration: calculateSegmentDuration(s.segment)
+            })
+          });
+        }
+      }
+    });
+  });
+}
+
+function searchTimestampsForLabel(searchText: string): LabelTimestamp[] {
+  return Object.entries(labelIndex).filter(([key]) => key.includes(searchText)).flatMap(([key, info]) => info);
+}
+
+function convertTimestampToNumber(timestamp: TimeOffset): number {
+  return (timestamp.seconds ?? 0) + (timestamp.nanos ?? 0) / 1000000000;
+}
+
+function calculateSegmentDuration(segment: Segment): number {
+  return convertTimestampToNumber(segment.end_time_offset) - convertTimestampToNumber(segment.start_time_offset);
+}
+
 </script>
 
 <template>
   <header class="header">
     <CosmosTitle>VideoGenius</CosmosTitle>
-    <CosmosInput class="search"></CosmosInput>
+    <CosmosInput class="search" label="Search" placeholder="Search for videos containing keywords or objects"></CosmosInput>
   </header>
 
   <div class="video-transcript columns">

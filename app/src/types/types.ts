@@ -5,15 +5,13 @@ export interface AnnotationResult {
 }
 
 export interface Segment {
-  start_time_offset: StartTimeOffset;
-  end_time_offset: EndTimeOffset;
+  start_time_offset: TimeOffset;
+  end_time_offset: TimeOffset;
 }
 
-export interface StartTimeOffset {}
-
-export interface EndTimeOffset {
-  seconds: number;
-  nanos: number;
+export interface TimeOffset {
+  seconds?: number;
+  nanos?: number;
 }
 
 export interface SpeechTranscription {
