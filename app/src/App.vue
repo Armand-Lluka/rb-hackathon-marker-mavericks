@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { CosmosText, CosmosTitle, CosmosInput } from "@cosmos/web/vue";
-import videoJson1 from "../public/FO-2BDUE7Y9A1113_proxy_normal - 1679579329.9757383.json";
-import videoJson2 from "../public/FO-2CDBKSCY61114_proxy_normal - 1679579329.0579545.json";
-
+import { CosmosText, CosmosTitle, CosmosInput, CosmosIconPlay } from "@cosmos/web/vue";
+import videoJson1 from "../public/MI201208130045_h264_720p - 1679578569.021352.json";
 
 import VideoPlayer from "./components/VideoPlayer.vue";
 import Transcript from "./components/Transcript.vue";
@@ -16,25 +14,22 @@ import speechTranscription from "./assets/json-output/SPEECH_TRANSCRIPTION/MI201
 const VIDEO_URL =
   "https://storage.googleapis.com/redbull_video_storage/MI201208130045_h264_720p.mp4";
 
-function getVideoStorageUrl(videoId: string) {
-  return `https://storage.googleapis.com/redbull_video_storage/${videoId}.mp4`;
-}
+const ANNOTATIONS: any = {
+  'MI201208130045_h264': videoJson1,
+};
 
-const videoIDs = [
-  "MI201305080084_h264_720p",
+const VIDEO_IDS = [
   "FO-2BDUE7Y9A1113_proxy_normal",
-  "MI201208130045_h264_720p",
-  "MI201205150126_h264_1080p",
   "FO-2CDBKSCY61114_proxy_normal"
 ];
 
-const videoURLS = [
-  "https://storage.googleapis.com/redbull_video_storage/MI201305080084_h264_720p.mp4",
-  "https://storage.googleapis.com/redbull_video_storage/FO-2BDUE7Y9A1113_proxy_normal.mp4",
+const VIDEO_URLS = [
   "https://storage.googleapis.com/redbull_video_storage/MI201208130045_h264_720p.mp4",
-  "https://storage.googleapis.com/redbull_video_storage/MI201205150126_h264_1080p.mp4",
-  "https://storage.googleapis.com/redbull_video_storage/FO-2CDBKSCY61114_proxy_normal.mp4"
 ];
+
+function getVideoStorageUrl(videoId: string) {
+  return `https://storage.googleapis.com/redbull_video_storage/${videoId}.mp4`;
+}
 
 interface LabelTimestamp {
   file: string;
@@ -48,9 +43,12 @@ const transcription: AnnotationResult =
 const currentParagraph = ref(-1);
 const currentWordIndex = ref(-1);
 const videoElement: Ref<HTMLVideoElement | null> = ref(null);
+const currentSearchInput = ref("");
+const currentSearchResult: Ref<LabelTimestamp[]> = ref([]);
 const labelIndex: Record<string, LabelTimestamp[]> = {};
 
 onMounted(() => {
+  indexLabels();
   videoElement.value = document.querySelector("video");
 });
 
@@ -111,6 +109,12 @@ function jumpToWord(word: Word) {
   }
 }
 
+function onSearchResultClick(result: LabelTimestamp) {
+  jumpToTimestamp(result.timeStamp);
+  currentSearchResult.value = [];
+  currentSearchInput.value = "";
+}
+
 function handleTimeUpdate(event: Event) {
   const currentTime = (event.target as HTMLVideoElement).currentTime;
 
@@ -159,29 +163,47 @@ watch(currentParagraph, (newValue) => {
   }
 });
 
+watch(currentSearchInput, (newValue) => {
+  if (newValue.length > 0) {
+    currentSearchResult.value = searchTimestampsForLabel(newValue);
+  } else {
+    currentSearchResult.value = [];
+  }
+  console.log(currentSearchResult.value);
+});
+
+function onSearchChanged(newValue: CustomEvent<{value: string}>)  {
+  console.log(newValue);
+  if (newValue.detail.value.length > 0) {
+    currentSearchResult.value = searchTimestampsForLabel(newValue.detail.value);
+  } else {
+    currentSearchResult.value = [];
+  }
+}
+
 function indexLabels() {
-  const videoAnnotations = [videoJson1];
-  videoAnnotations.forEach(va => {
-    va.annotation_results.forEach(r => {
-      if (r.shot_label_annotations) {
-        const fileName = r.input_uri;
-        for (const shotLabel of r.shot_label_annotations) {
-          const segments: {segment: Segment}[] = shotLabel.segments;
-          const longEnoughSegments = segments.filter(s => calculateSegmentDuration(s.segment) >= 1);
-          longEnoughSegments.forEach(s => {
-            if (!labelIndex[shotLabel.entity.description]) {
-              labelIndex[shotLabel.entity.description] = [];
-            }
-            labelIndex[shotLabel.entity.description].push({
-              file: fileName,
-              label: shotLabel.entity.description,
-              timeStamp: convertTimestampToNumber(s.segment.start_time_offset),
-              duration: calculateSegmentDuration(s.segment)
-            })
-          });
+  Object.values(ANNOTATIONS).forEach((va: any) => {
+      va.annotation_results.forEach((r: any) => {
+        if (r.shot_label_annotations) {
+          const fileName = r.input_uri;
+
+          for (const shotLabel of r.shot_label_annotations) {
+            const segments: { segment: Segment }[] = shotLabel.segments;
+            const longEnoughSegments = segments.filter(s => calculateSegmentDuration(s.segment) >= 1);
+            longEnoughSegments.forEach(s => {
+              if (!labelIndex[shotLabel.entity.description]) {
+                labelIndex[shotLabel.entity.description] = [];
+              }
+              labelIndex[shotLabel.entity.description].push({
+                file: fileName,
+                label: shotLabel.entity.description,
+                timeStamp: convertTimestampToNumber(s.segment.start_time_offset),
+                duration: calculateSegmentDuration(s.segment)
+              })
+            });
+          }
         }
-      }
-    });
+      });
   });
 }
 
@@ -196,19 +218,28 @@ function convertTimestampToNumber(timestamp: TimeOffset): number {
 function calculateSegmentDuration(segment: Segment): number {
   return convertTimestampToNumber(segment.end_time_offset) - convertTimestampToNumber(segment.start_time_offset);
 }
-
 </script>
 
 <template>
   <header class="header">
-    <CosmosTitle>VideoGenius</CosmosTitle>
-    <CosmosInput class="search" label="Search" placeholder="Search for videos containing keywords or objects"></CosmosInput>
+    <CosmosTitle><CosmosIconPlay/>VideoGenius</CosmosTitle>
+    <CosmosInput class="search" label="Search" placeholder="Search for videos containing keywords or objects" @inputinput="onSearchChanged"></CosmosInput>
+    <div class="search-results" v-if="currentSearchResult.length > 0">
+      <CosmosText v-for="(result, index) in currentSearchResult" :key="index"
+                  size="small@medium medium@small"
+                  class="search-result"
+                  @click="onSearchResultClick(result)"
+      >
+        {{ result.label + " (" + result.timeStamp + ")"  }}
+      </CosmosText>
+    </div>
   </header>
 
-  <div class="video-transcript columns">
-    <div class="video-wrapper primary">
-      <VideoPlayer :videoUrl="VIDEO_URL" @timeupdate="handleTimeUpdate" />
 
+
+  <div v-for="video of VIDEO_URLS" class="video-transcript columns">
+    <div class="video-wrapper primary">
+      <VideoPlayer :videoUrl="video" @timeupdate="handleTimeUpdate" />
     </div>
     <div class="transcript secondary">
       <Transcript class="secondary-inner" :transcription="transcription" :currentParagraph="currentParagraph">
@@ -293,4 +324,22 @@ function calculateSegmentDuration(segment: Segment): number {
   margin-bottom: 0.25rem;
   --cosmos-text-color: #0a86cb;
 }
+
+.header {
+  position: relative;
+}
+
+.search-results {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 10%;
+  border: 2px solid black;
+  background: white;
+}
+
+.search-result {
+  cursor: pointer;
+}
+
 </style>

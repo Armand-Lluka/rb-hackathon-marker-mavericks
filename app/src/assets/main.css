@@ -8,12 +8,17 @@ body {
 
 .header {
   display: flex;
-  gap: 1rem;
+  position: relative;
+  justify-content: center;
 }
 
 .header .search {
   max-width: 500px;
-  margin-inline-start: auto;
+}
+
+.header > :first-child {
+  position: absolute;
+  left: 0;
 }
 
 /* .video-transcript {
