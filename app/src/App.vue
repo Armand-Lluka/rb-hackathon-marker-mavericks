@@ -14,7 +14,7 @@ const VIDEO_URL =
   "https://storage.googleapis.com/redbull_video_storage/MI201208130045_h264_720p.mp4";
 
 const transcription: AnnotationResult =
-  speechTranscription.annotation_results[0];
+    filterTranscript(speechTranscription.annotation_results[0]);
 const currentParagraph = ref(-1);
 const currentWordIndex = ref(-1);
 const videoElement: Ref<HTMLVideoElement | null> = ref(null);
@@ -22,6 +22,20 @@ const videoElement: Ref<HTMLVideoElement | null> = ref(null);
 onMounted(() => {
   videoElement.value = document.querySelector("video");
 });
+
+function filterTranscript(annotationResult: AnnotationResult) {
+  return {
+    ...annotationResult,
+    speech_transcriptions: annotationResult.speech_transcriptions
+        .map((transcription) => ({
+          ...transcription,
+          alternatives: transcription.alternatives.filter((alternative) =>
+              alternative.hasOwnProperty("transcript")
+          ),
+        }))
+        .filter((transcription) => transcription.alternatives.length > 0),
+  };
+}
 
 const paragraphTimes = computed(() => {
   return transcription.speech_transcriptions
@@ -95,12 +109,19 @@ function handleTimeUpdate(event: Event) {
 watch(currentParagraph, (newValue) => {
   if (newValue !== -1) {
     const paragraphElement = document.querySelector(
-      `.paragraph[data-index="${newValue}"]`
+        `.paragraph[data-index="${newValue}"]`
     ) as HTMLElement;
 
     if (paragraphElement) {
-      window.scrollTo({
-        top: paragraphElement.offsetTop - 16,
+      const containerElement = paragraphElement.parentElement as HTMLElement;
+      const containerRect = containerElement.getBoundingClientRect();
+      const elementRect = paragraphElement.getBoundingClientRect();
+
+      // Calculate the scroll position so that the paragraph element is at the top of the container, offset by 8px
+      const scrollPosition = elementRect.top - containerRect.top + containerElement.scrollTop - 8;
+
+      containerElement.scrollTo({
+        top: scrollPosition,
         behavior: "smooth",
       });
     }
